@@ -227,7 +227,7 @@ abstract class OAuth2 {
 
     // Store refresh access tokens
     // Required for REFRESH_TOKEN_GRANT_TYPE
-    protected function store_refresh_token($token, $client_id, $scope = null) {
+    protected function store_refresh_token($token, $client_id, $expires, $scope = null) {
         // If storage fails for some reason, we're not currently checking
         // for any sort of success/failure, so you should bail out of the
         // script and provide a descriptive fail message
@@ -595,7 +595,7 @@ abstract class OAuth2 {
         // Issue a refresh token also, if we support them
         if (in_array(REFRESH_TOKEN_GRANT_TYPE, $this->get_supported_grant_types())) {
             $token["refresh_token"] = $this->gen_access_token();
-            $this->store_refresh_token($token["refresh_token"], $client_id, $scope);
+            $this->store_refresh_token($token["refresh_token"], $client_id, time() + $this->refresh_token_lifetime, $scope);
         }
 
         return $token;
