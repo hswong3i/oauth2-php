@@ -1,0 +1,86 @@
+<?php
+
+/*
+ *
+ * Sample OAuth2 Library Mongo DB Implementation
+ *
+ */
+
+define("MONGO_CONNECTION", "mongodb://user:pass@mongoserver/db");
+define("MONGO_DB");
+
+include "oauth.php";
+
+class MongoOAuth2 extends OAuth2 {
+    private $db;
+
+    public function __construct() {
+        parent::__construct();
+
+        $mongo = new Mongo(MONGO_CONNECTION);
+        $this->db = $mongo->selectDB(MONGO_DB);
+    }
+
+    // Little helper function to add a new client to the database
+    // Do NOT use this in production!  This sample code stores the secret in plaintext!
+    public function add_client($client_id, $secret, $redirect_uri) {
+        $this->db->clients->insert(array(
+            "_id" => $client_id,
+            "pw" => $secret,
+            "redirect_uri" => $redirect_uri
+        ));
+    }
+
+    /*
+     *
+     * Below, we've implemented the required OAuth2 methods
+     * which are either declared as abstract or meant to be
+     * overridden in the base class.
+     *
+     */
+
+    // Do NOT use this in production!  This sample code stores the secret in plaintext!
+    protected function auth_client_credentials($client_id, $client_secret = null) {
+        $client = $this->db->clients->findOne(array("_id" => $client_id, "pw" =>  $client_secret));
+        return $client !== null;
+    }
+
+    protected function get_redirect_uri($client_id) {
+        $uri = $this->db->clients->findOne(array("_id" => $client_id), array("redirect_uri"));
+        return $uri !== null ? $uri["redirect_uri"] : null;
+    }
+
+    protected function get_access_token($token_id) {
+        return $this->db->tokens->findOne(array("_id" => $token_id));
+    }
+
+    protected function store_access_token($token_id, $client_id, $expires, $scope = null) {
+        $this->db->tokens->insert(array(
+            "_id" => $token_id,
+            "client_id" => $client_id,
+            "expires" => $expires,
+            "scope" => $scope
+        ));
+    }
+
+    protected function get_supported_grant_types() {
+        return array(AUTH_CODE_GRANT_TYPE);
+    }
+
+    protected function get_stored_auth_code($code) {
+        $stored_code = $this->db->auth_codes->findOne(array("_id" => $code));
+        return $stored_code !== null ? $stored_code : false;
+    }
+
+    // Take the provided authorization code values and store them somewhere (db, etc.)
+    // Required for AUTH_CODE_GRANT_TYPE
+    protected function store_auth_code($code, $client_id, $redirect_uri, $expires, $scope) {
+        $this->db->auth_codes->insert(array(
+            "_id" => $code,
+            "client_id" => $client_id,
+            "redirect_uri" => $redirect_uri,
+            "expires" => $expires,
+            "scope" => $scope
+        ));
+    }
+}
