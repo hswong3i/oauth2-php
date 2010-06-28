@@ -6,8 +6,9 @@
  *
  */
 
-define("MONGO_CONNECTION", "mongodb://user:pass@mongoserver/db");
-define("MONGO_DB");
+// Set these values to your Mongo database
+define("MONGO_CONNECTION", "mongodb://user:pass@mongoserver/mydb");
+define("MONGO_DB", "mydb");
 
 include "oauth.php";
 
