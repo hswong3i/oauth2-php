@@ -415,7 +415,7 @@ abstract class OAuth2 {
 
                 $stored = $this->get_stored_auth_code($input["code"]);
 
-                if ($stored === null || $input["redirect_uri"] != $stored["redirect_uri"] || $client[0] != $stored["client_id"])
+                if ($stored === false || $input["redirect_uri"] != $stored["redirect_uri"] || $client[0] != $stored["client_id"])
                     $this->error(ERROR_BAD_REQUEST, ERROR_BAD_AUTHORIZATION_CODE);
 
                 if ($stored["expires"] > time())

@@ -70,7 +70,7 @@ class MongoOAuth2 extends OAuth2 {
 
     protected function get_stored_auth_code($code) {
         $stored_code = $this->db->auth_codes->findOne(array("_id" => $code));
-        return $stored_code !== null ? $stored_code : false;
+        return $stored_code !== null ? $stored_code : null;
     }
 
     // Take the provided authorization code values and store them somewhere (db, etc.)
