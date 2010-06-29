@@ -22,7 +22,6 @@ class MongoOAuth2 extends OAuth2 {
         $this->db = $mongo->selectDB(MONGO_DB);
     }
 
-    // Little helper function to add a new client to the database
     // Do NOT use this in production!  This sample code stores the secret in plaintext!
     public function add_client($client_id, $secret, $redirect_uri) {
         $this->db->clients->insert(array(
@@ -48,7 +47,7 @@ class MongoOAuth2 extends OAuth2 {
 
     protected function get_redirect_uri($client_id) {
         $uri = $this->db->clients->findOne(array("_id" => $client_id), array("redirect_uri"));
-        return $uri !== null ? $uri["redirect_uri"] : null;
+        return $uri !== null ? $uri["redirect_uri"] : false;
     }
 
     protected function get_access_token($token_id) {
@@ -70,7 +69,7 @@ class MongoOAuth2 extends OAuth2 {
 
     protected function get_stored_auth_code($code) {
         $stored_code = $this->db->auth_codes->findOne(array("_id" => $code));
-        return $stored_code !== null ? $stored_code : null;
+        return $stored_code !== null ? $stored_code : false;
     }
 
     // Take the provided authorization code values and store them somewhere (db, etc.)

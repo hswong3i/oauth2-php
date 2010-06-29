@@ -7,9 +7,9 @@
  *
  */
 
-require "lib/mongo_oauth.php";
+require "lib/pdo_oauth.php";
 
-$oauth = new MongoOAuth2();
+$oauth = new PDOOAuth2();
 
 if ($_POST) {
     $is_authorized = $_POST["accept"] == "Yep";

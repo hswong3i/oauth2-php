@@ -13,7 +13,7 @@ define("PDO_PASS", "pass");
 
 include "oauth.php";
 
-class MongoOAuth2 extends OAuth2 {
+class PDOOAuth2 extends OAuth2 {
     private $db;
 
     public function __construct() {
@@ -30,6 +30,11 @@ class MongoOAuth2 extends OAuth2 {
         $this->db = null; // Release db connection
     }
 
+    private function handle_exception($e) {
+        echo "Database error: " . $e->getMessage();
+        exit;
+    }
+
     // Little helper function to add a new client to the database
     // Do NOT use this in production!  This sample code stores the secret in plaintext!
     public function add_client($client_id, $secret, $redirect_uri) {
@@ -41,7 +46,7 @@ class MongoOAuth2 extends OAuth2 {
             $stmt->bindParam(":redirect_uri", $redirect_uri, PDO::PARAM_STR);
             $stmt->execute();
         } catch (PDOException $e) {
-            echo "Database error: " . $e->getMessage();
+            $this->handle_exception($e);
         }
     }
 
@@ -68,7 +73,7 @@ class MongoOAuth2 extends OAuth2 {
 
             return $result["pw"] == $client_secret;
         } catch (PDOException $e) {
-            echo "Database error: " . $e->getMessage();
+            $this->handle_exception($e);
         }
     }
 
@@ -81,9 +86,12 @@ class MongoOAuth2 extends OAuth2 {
 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            return $result !== false && isset($result["redirect_uri"]) && $result["redirect_uri"] ? $result["redirect_uri"] : null;
+            if ($result === false)
+                return false;
+
+            return isset($result["redirect_uri"]) && $result["redirect_uri"] ? $result["redirect_uri"] : null;
         } catch (PDOException $e) {
-            echo "Database error: " . $e->getMessage();
+            $this->handle_exception($e);
         }
     }
 
@@ -98,7 +106,7 @@ class MongoOAuth2 extends OAuth2 {
 
             return $result !== false ? $result : null;
         } catch (PDOException $e) {
-            echo "Database error: " . $e->getMessage();
+            $this->handle_exception($e);
         }
     }
 
@@ -113,7 +121,7 @@ class MongoOAuth2 extends OAuth2 {
 
             $stmt->execute();
         } catch (PDOException $e) {
-            echo "Database error: " . $e->getMessage();
+            $this->handle_exception($e);
         }
     }
 
@@ -122,14 +130,18 @@ class MongoOAuth2 extends OAuth2 {
     }
 
     protected function get_stored_auth_code($code) {
-        $sql = "select id, client_id, redirect_uri, expires, scope from auth_codes where id = :id";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(":id", $code, PDO::PARAM_STR);
-        $stmt->execute;
+        try {
+            $sql = "select id, client_id, redirect_uri, expires, scope from auth_codes where id = :id";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(":id", $code, PDO::PARAM_STR);
+            $stmt->execute();
 
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $result !== false ? $result : null;
+            return $result !== false ? $result : null;
+        } catch (PDOException $e) {
+            $this->handle_exception($e);
+        }
     }
 
     // Take the provided authorization code values and store them somewhere (db, etc.)
@@ -146,7 +158,7 @@ class MongoOAuth2 extends OAuth2 {
 
             $stmt->execute();
         } catch (PDOException $e) {
-            echo "Database error: " . $e->getMessage();
+            $this->handle_exception($e);
         }
     }
 }
