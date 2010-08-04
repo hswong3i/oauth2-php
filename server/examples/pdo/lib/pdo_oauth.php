@@ -37,7 +37,7 @@ class PDOOAuth2 extends OAuth2 {
 
     // Little helper function to add a new client to the database
     // Do NOT use this in production!  This sample code stores the secret in plaintext!
-    public function add_client($client_id, $secret, $redirect_uri) {
+    public function add_client($client_id, $pw, $redirect_uri) {
         try {
             $sql = "insert into clients (client_id, pw, redirect_uri) values (:client_id, :pw, :redirect_uri)";
             $stmt = $this->db->prepare($sql);
