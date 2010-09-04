@@ -1,4 +1,10 @@
 <?php
+/**
+ * http://code.google.com/p/oauth2-php/
+ * 
+ * By Tim Ridgely tim.ridgely@gmail.com
+ * Updated to draft v10 by Aaron Parecki aaron@parecki.com
+ */
 
 ini_set('display_errors', 1);
 error_reporting(E_ALL | E_STRICT);
@@ -26,12 +32,12 @@ define("CODE_AND_TOKEN_AUTH_RESPONSE_TYPE", "code-and-token");
 define("REGEX_AUTH_RESPONSE_TYPE", "/^(token|code|code-and-token)$/");
 
 // Grant Types (for token obtaining)
-define("AUTH_CODE_GRANT_TYPE", "authorization-code");
-define("USER_CREDENTIALS_GRANT_TYPE", "basic-credentials");
+define("AUTH_CODE_GRANT_TYPE", "authorization_code");
+define("USER_CREDENTIALS_GRANT_TYPE", "password");
 define("ASSERTION_GRANT_TYPE", "assertion");
-define("REFRESH_TOKEN_GRANT_TYPE", "refresh-token");
+define("REFRESH_TOKEN_GRANT_TYPE", "refresh_token");
 define("NONE_GRANT_TYPE", "none");
-define("REGEX_TOKEN_GRANT_TYPE", "/^(authorization-code|basic-credentials|assertion|refresh-token|none)$/");
+define("REGEX_TOKEN_GRANT_TYPE", "/^(authorization_code|password|assertion|refresh_token|none)$/");
 
 /* Error handling constants */
 
@@ -42,20 +48,20 @@ define("ERROR_BAD_REQUEST", "400 Bad Request");
 // TODO: Extend for i18n
 
 // "Official" OAuth 2.0 errors
-define("ERROR_REDIRECT_URI_MISMATCH", "redirect-uri-mismatch");
-define("ERROR_INVALID_CLIENT_CREDENTIALS", "invalid-client-credentials");
-define("ERROR_UNAUTHORIZED_CLIENT", "unauthorized-client");
-define("ERROR_USER_DENIED", "access-denied");
-define("ERROR_INVALID_REQUEST", "invalid-request");
-define("ERROR_INVALID_CLIENT_ID", "invalid-client-id");
-define("ERROR_UNSUPPORTED_RESPONSE_TYPE", "unsupported-response-type");
-define("ERROR_INVALID_SCOPE", "invalid-scope");
-define("ERROR_INVALID_GRANT", "invalid-grant");
+define("ERROR_REDIRECT_URI_MISMATCH", "redirect_uri_mismatch");
+define("ERROR_INVALID_CLIENT_CREDENTIALS", "invalid_client_credentials");
+define("ERROR_UNAUTHORIZED_CLIENT", "unauthorized_client");
+define("ERROR_USER_DENIED", "access_denied");
+define("ERROR_INVALID_REQUEST", "invalid_request");
+define("ERROR_INVALID_CLIENT_ID", "invalid_client_id");
+define("ERROR_UNSUPPORTED_RESPONSE_TYPE", "unsupported_response_type");
+define("ERROR_INVALID_SCOPE", "invalid_scope");
+define("ERROR_INVALID_GRANT", "invalid_grant");
 
 // Protected resource errors
-define("ERROR_INVALID_TOKEN", "invalid-token");
-define("ERROR_EXPIRED_TOKEN", "expired-token");
-define("ERROR_INSUFFICIENT_SCOPE", "insufficient-scope");
+define("ERROR_INVALID_TOKEN", "invalid_token");
+define("ERROR_EXPIRED_TOKEN", "expired_token");
+define("ERROR_INSUFFICIENT_SCOPE", "insufficient_scope");
 
 // Messages
 define("ERROR_INVALID_RESPONSE_TYPE", "Invalid response type.");
@@ -63,7 +69,10 @@ define("ERROR_INVALID_RESPONSE_TYPE", "Invalid response type.");
 // Errors that we made up
 
 // Error for trying to use a grant type that we haven't implemented
-define("ERROR_UNSUPPORTED_GRANT_TYPE", "unsupported-grant-type");
+define("ERROR_UNSUPPORTED_GRANT_TYPE", "unsupported_grant_type");
+
+// Whether to show verbose error messages in the JSON response
+define("ERROR_VERBOSE", TRUE);
 
 abstract class OAuth2 {
 
@@ -261,6 +270,19 @@ abstract class OAuth2 {
         return;
     }
 
+    private $old_refresh_token = '';
+    
+    // Expire a used refresh token.
+    // This is not explicitly required in the spec, but is almost implied. After granting a new refresh token,
+    // the old one is no longer useful and so should be forcibly expired in the data store so it can't be used again.
+    protected function expire_refresh_token($token) {
+        // If storage fails for some reason, we're not currently checking
+        // for any sort of success/failure, so you should bail out of the
+        // script and provide a descriptive fail message
+
+    	return;
+    }
+    
     // Grant access tokens for the "none" grant type
     // Not really described in the IETF Draft, so I just left a method stub...do whatever you want!
     // Required for NONE_GRANT_TYPE
@@ -373,24 +395,24 @@ abstract class OAuth2 {
         if ($auth_header !== false) {
             // Make sure only the auth header is set
             if (isset($_GET[OAUTH_TOKEN_PARAM_NAME]) || isset($_POST[OAUTH_TOKEN_PARAM_NAME]))
-                $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST);
+                $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST, 'Auth token found in GET or POST when token present in header');
 
             $auth_header = trim($auth_header);
 
             // Make sure it's Token authorization
             if (strcmp(substr($auth_header, 0, 6),"Token ") !== 0)
-                $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST);
+                $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST, 'Auth header found that doesn\'t start with "Token"');
 
             // Parse the rest of the header
             if (preg_match('/\s*token\s*="(.+)"/', substr($auth_header, 6), $matches) == 0 || count($matches) < 2)
-                $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST);
+                $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST, 'Malformed auth header');
 
             return $matches[1];
         }
 
         if (isset($_GET[OAUTH_TOKEN_PARAM_NAME]))  {
             if (isset($_POST[OAUTH_TOKEN_PARAM_NAME])) // Both GET and POST are not allowed
-                $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST);
+                $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST, 'Only send the token in GET or POST, not both');
 
             return $_GET[OAUTH_TOKEN_PARAM_NAME];
         }
@@ -420,10 +442,10 @@ abstract class OAuth2 {
         );
 
         $input = filter_input_array(INPUT_POST, $filters);
-
+        
         // Grant Type must be specified.
         if (!$input["grant_type"])
-            $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST);
+            $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST, 'Invalid grant_type parameter or parameter missing');
 
         // Make sure we've implemented the requested grant type
         if (!in_array($input["grant_type"], $this->get_supported_grant_types()))
@@ -449,13 +471,13 @@ abstract class OAuth2 {
                 if ($stored === null || $input["redirect_uri"] != $stored["redirect_uri"] || $client[0] != $stored["client_id"])
                     $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_GRANT);
 
-                if ($stored["expires"] > time())
-                    $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_GRANT);
+                if ($stored["expires"] < time())
+                    $this->error(ERROR_BAD_REQUEST, ERROR_EXPIRED_TOKEN);
 
                 break;
             case USER_CREDENTIALS_GRANT_TYPE:
                 if (!$input["username"] || !$input["password"])
-                    $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST);
+                    $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST, 'Missing parameters. "username" and "password" required');
 
                 $stored = $this->check_user_credentials($client[0], $input["username"], $input["password"]);
 
@@ -475,16 +497,19 @@ abstract class OAuth2 {
                 break;
             case REFRESH_TOKEN_GRANT_TYPE:
                 if (!$input["refresh_token"])
-                    $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST);
+                    $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST, 'No "refresh_token" parameter found');
 
                 $stored = $this->get_refresh_token($input["refresh_token"]);
 
                 if ($stored === null || $client[0] != $stored["client_id"])
                     $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_GRANT);
+                    
+                if ($stored["expires"] < time())
+                    $this->error(ERROR_BAD_REQUEST, ERROR_EXPIRED_TOKEN);
 
-                if ($stored["expires"] > time())
-                    $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_GRANT);
-
+                // store the refresh token locally so we can delete it when a new refresh token is generated
+                $this->old_refresh_token = $stored["token"];
+                    
                 break;
             case NONE_GRANT_TYPE:
                 $stored = $this->check_none_access($client[0]);
@@ -508,7 +533,7 @@ abstract class OAuth2 {
 
     // Internal function used to get the client credentials from HTTP basic auth or POST data
     // See http://tools.ietf.org/html/draft-ietf-oauth-v2-08#section-2
-    private function get_client_credentials() {
+    protected function get_client_credentials() {
         if (isset($_SERVER["PHP_AUTH_USER"]) && $_POST && isset($_POST["client_id"]))
             $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_CLIENT_CREDENTIALS);
 
@@ -644,7 +669,7 @@ abstract class OAuth2 {
     }
 
     // This belongs in a separate factory, but to keep it simple, I'm just keeping it here.
-    private function create_access_token($client_id, $scope) {
+    protected function create_access_token($client_id, $scope) {
         $token = array(
             "access_token" => $this->gen_access_token(),
             "expires_in" => $this->access_token_lifetime,
@@ -657,6 +682,9 @@ abstract class OAuth2 {
         if (in_array(REFRESH_TOKEN_GRANT_TYPE, $this->get_supported_grant_types())) {
             $token["refresh_token"] = $this->gen_access_token();
             $this->store_refresh_token($token["refresh_token"], $client_id, time() + $this->refresh_token_lifetime, $scope);
+            // If we've granted a new refresh token, expire the old one
+            if($this->old_refresh_token)
+	            $this->expire_refresh_token($this->old_refresh_token);
         }
 
         return $token;
@@ -670,11 +698,11 @@ abstract class OAuth2 {
 
     // Implementing classes may want to override these two functions
     // to implement other access token or auth code generation schemes
-    private function gen_access_token() {
+    protected function gen_access_token() {
         return base64_encode(pack('N6', mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand()));
     }
 
-    private function gen_auth_code() {
+    protected function gen_auth_code() {
         return base64_encode(pack('N6', mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand()));
     }
 
@@ -700,12 +728,15 @@ abstract class OAuth2 {
         header("Cache-Control: no-store");
     }
 
-    public function error($code, $message = null) {
+    public function error($code, $message = null, $description = null) {
         header("HTTP/1.1 " . $code);
 
         if ($message) {
             $this->send_json_headers();
-            echo json_encode(array("error" => $message));
+            $response = array("error" => $message);
+            if(ERROR_VERBOSE && $description)
+            	$response["error_description"] = $description;
+            echo json_encode($response);
         }
 
         exit;

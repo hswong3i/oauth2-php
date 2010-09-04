@@ -97,9 +97,9 @@ class PDOOAuth2 extends OAuth2 {
 
     protected function get_access_token($token_id) {
         try {
-            $sql = "select client_id, expires, scope from tokens where id = :client_id";
+            $sql = "select client_id, expires, scope from tokens where id = :token_id";
             $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(":client_id", $client_id, PDO::PARAM_STR);
+            $stmt->bindParam(":token_id", $token_id, PDO::PARAM_STR);
             $stmt->execute();
 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
