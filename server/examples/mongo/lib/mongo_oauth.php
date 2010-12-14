@@ -10,7 +10,7 @@
 define("MONGO_CONNECTION", "mongodb://user:pass@mongoserver/mydb");
 define("MONGO_DB", "mydb");
 
-include "../../../../lib/oauth.php";
+include "../../../lib/oauth.php";
 
 class MongoOAuth2 extends OAuth2 {
     private $db;
@@ -50,13 +50,13 @@ class MongoOAuth2 extends OAuth2 {
         return $uri !== null ? $uri["redirect_uri"] : false;
     }
 
-    protected function get_access_token($token_id) {
-        return $this->db->tokens->findOne(array("_id" => $token_id));
+    protected function get_access_token($oauth_token) {
+        return $this->db->tokens->findOne(array("_id" => $oauth_token));
     }
 
-    protected function store_access_token($token_id, $client_id, $expires, $scope = null) {
+    protected function store_access_token($oauth_token, $client_id, $expires, $scope = null) {
         $this->db->tokens->insert(array(
-            "_id" => $token_id,
+            "_id" => $oauth_token,
             "client_id" => $client_id,
             "expires" => $expires,
             "scope" => $scope
@@ -74,7 +74,7 @@ class MongoOAuth2 extends OAuth2 {
 
     // Take the provided authorization code values and store them somewhere (db, etc.)
     // Required for AUTH_CODE_GRANT_TYPE
-    protected function store_auth_code($code, $client_id, $redirect_uri, $expires, $scope) {
+    protected function store_auth_code($code, $client_id, $redirect_uri, $expires, $scope = null) {
         $this->db->auth_codes->insert(array(
             "_id" => $code,
             "client_id" => $client_id,

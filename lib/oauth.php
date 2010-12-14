@@ -12,9 +12,9 @@ error_reporting(E_ALL | E_STRICT);
 // Regex to filter out the client identifier
 // (described in Section 2 of IETF draft)
 // IETF draft does not prescribe a format for these, however
-// I've arbitrarily chosen alphanumeric strings with hyphens and underscores, 3-12 characters long
+// I've arbitrarily chosen alphanumeric strings with hyphens and underscores, 3-32 characters long
 // Feel free to change.
-define("REGEX_CLIENT_ID", "/^[a-z0-9-_]{3,12}$/i");
+define("REGEX_CLIENT_ID", "/^[a-z0-9-_]{3,32}$/i");
 
 // Used to define the name of the OAuth access token parameter (POST/GET/etc.)
 // IETF Draft sections 5.2 and 5.3 specify that it should be called "oauth_token"
@@ -101,10 +101,10 @@ abstract class OAuth2 {
     //
     //  Return null if the supplied token is invalid
     //
-    abstract protected function get_access_token($token_id);
+    abstract protected function get_access_token($oauth_token);
 
     // Store the supplied values
-    abstract protected function store_access_token($token_id, $client_id, $expires, $scope = null);
+    abstract protected function store_access_token($oauth_token, $client_id, $expires, $scope = null);
 
     /*
      *
@@ -186,7 +186,7 @@ abstract class OAuth2 {
 
     // Take the provided authorization code values and store them somewhere (db, etc.)
     // Required for AUTH_CODE_GRANT_TYPE
-    protected function store_auth_code($code, $client_id, $redirect_uri, $expires, $scope) {
+    protected function store_auth_code($code, $client_id, $redirect_uri, $expires, $scope = null) {
         // This function should be the storage counterpart to get_stored_auth_code
 
         // If storage fails for some reason, we're not currently checking
@@ -433,7 +433,7 @@ abstract class OAuth2 {
             "grant_type" => array("filter" => FILTER_VALIDATE_REGEXP, "options" => array("regexp" => REGEX_TOKEN_GRANT_TYPE), "flags" => FILTER_REQUIRE_SCALAR),
             "scope" => array("flags" => FILTER_REQUIRE_SCALAR),
             "code" => array("flags" => FILTER_REQUIRE_SCALAR),
-            "redirect_uri" => array("filter" => FILTER_VALIDATE_URL, "flags" => array(FILTER_FLAG_SCHEME_REQUIRED, FILTER_REQUIRE_SCALAR)),
+            "redirect_uri" => array("filter" => FILTER_SANITIZE_URL),
             "username" => array("flags" => FILTER_REQUIRE_SCALAR),
             "password" => array("flags" => FILTER_REQUIRE_SCALAR),
             "assertion_type" => array("flags" => FILTER_REQUIRE_SCALAR),
@@ -468,7 +468,8 @@ abstract class OAuth2 {
 
                 $stored = $this->get_stored_auth_code($input["code"]);
 
-                if ($stored === null || $input["redirect_uri"] != $stored["redirect_uri"] || $client[0] != $stored["client_id"])
+                // Ensure that the input uri starts with the stored uri
+                if ($stored === null || (strcasecmp(substr($input["redirect_uri"], 0, strlen($stored["redirect_uri"])), $stored["redirect_uri"]) !== 0) || $client[0] != $stored["client_id"])
                     $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_GRANT);
 
                 if ($stored["expires"] < time())
@@ -562,7 +563,7 @@ abstract class OAuth2 {
         $filters = array(
             "client_id" => array("filter" => FILTER_VALIDATE_REGEXP, "options" => array("regexp" => REGEX_CLIENT_ID), "flags" => FILTER_REQUIRE_SCALAR),
             "response_type" => array("filter" => FILTER_VALIDATE_REGEXP, "options" => array("regexp" => REGEX_AUTH_RESPONSE_TYPE), "flags" => FILTER_REQUIRE_SCALAR),
-            "redirect_uri" => array("filter" => FILTER_VALIDATE_URL, "flags" => array(FILTER_FLAG_SCHEME_REQUIRED, FILTER_REQUIRE_SCALAR)),
+            "redirect_uri" => array("filter" => FILTER_SANITIZE_URL),
             "state" => array("flags" => FILTER_REQUIRE_SCALAR),
             "scope" => array("flags" => FILTER_REQUIRE_SCALAR),
         );
@@ -606,6 +607,10 @@ abstract class OAuth2 {
         // Check requested auth response type against the list of supported types
         if (array_search($input["response_type"], $this->get_supported_auth_response_types()) === false)
             $this->callback_error($input["redirect_uri"], ERROR_UNSUPPORTED_RESPONSE_TYPE, $input["state"]);
+
+        // Restrict clients to certain authorization response types
+        if ($this->authorize_client_response_type($input["client_id"], $input["response_type"]) === false)
+            $this->callback_error($input["redirect_uri"], ERROR_UNAUTHORIZED_CLIENT, $input["state"]);
 
         // Validate that the requested scope is supported
         if ($input["scope"] && !$this->check_scope($input["scope"], $this->get_supported_scopes()))
@@ -728,30 +733,36 @@ abstract class OAuth2 {
         header("Cache-Control: no-store");
     }
 
-    public function error($code, $message = null, $description = null) {
-        header("HTTP/1.1 " . $code);
+    public function error($http_status_code, $error = null, $error_description = null, $error_uri = null) {
+        header("HTTP/1.1 " . $http_status_code);
 
-        if ($message) {
+        if ($error) {
             $this->send_json_headers();
-            $response = array("error" => $message);
-            if(ERROR_VERBOSE && $description)
-                $response["error_description"] = $description;
-            echo json_encode($response);
+
+            $result['error'] = $error;
+
+            if(ERROR_VERBOSE && $error_description)
+                $result["error_description"] = $error_description;
+
+            if(ERROR_VERBOSE && $error_uri)
+                $result["error_uri"] = $error_uri;
+
+            echo json_encode($result);
         }
 
         exit;
     }
 
-    public function callback_error($redirect_uri, $error, $state, $message = null, $error_uri = null) {
+    public function callback_error($redirect_uri, $error, $state, $error_description = null, $error_uri = null) {
         $result["query"]["error"] = $error;
 
         if ($state)
             $result["query"]["state"] = $state;
 
-        if ($message)
-            $result["query"]["error_description"] = $message;
+        if(ERROR_VERBOSE && $error_description)
+            $result["query"]["error_description"] = $error_description;
 
-        if ($error_uri)
+        if(ERROR_VERBOSE && $error_uri)
             $result["query"]["error_uri"] = $error_uri;
 
         $this->do_redirect_uri_callback($redirect_uri, $result);

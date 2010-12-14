@@ -11,7 +11,7 @@ define("PDO_DSN", "mysql:dbname=mydb;host=localhost");
 define("PDO_USER", "user");
 define("PDO_PASS", "pass");
 
-include "../../../../lib/oauth.php";
+include "../../../lib/oauth.php";
 
 class PDOOAuth2 extends OAuth2 {
     private $db;
@@ -37,12 +37,12 @@ class PDOOAuth2 extends OAuth2 {
 
     // Little helper function to add a new client to the database
     // Do NOT use this in production!  This sample code stores the secret in plaintext!
-    public function add_client($client_id, $pw, $redirect_uri) {
+    public function add_client($client_id, $client_secret, $redirect_uri) {
         try {
-            $sql = "insert into clients (client_id, pw, redirect_uri) values (:client_id, :pw, :redirect_uri)";
+            $sql = "insert into clients (client_id, client_secret, redirect_uri) values (:client_id, :client_secret, :redirect_uri)";
             $stmt = $this->db->prepare($sql);
             $stmt->bindParam(":client_id", $client_id, PDO::PARAM_STR);
-            $stmt->bindParam(":pw", $pw, PDO::PARAM_STR);
+            $stmt->bindParam(":client_secret", $client_secret, PDO::PARAM_STR);
             $stmt->bindParam(":redirect_uri", $redirect_uri, PDO::PARAM_STR);
             $stmt->execute();
         } catch (PDOException $e) {
@@ -61,7 +61,7 @@ class PDOOAuth2 extends OAuth2 {
     // Do NOT use this in production!  This sample code stores the secret in plaintext!
     protected function auth_client_credentials($client_id, $client_secret = null) {
         try {
-            $sql = "select pw from clients where client_id = :client_id";
+            $sql = "select client_secret from clients where client_id = :client_id";
             $stmt = $this->db->prepare($sql);
             $stmt->bindParam(":client_id", $client_id, PDO::PARAM_STR);
             $stmt->execute();
@@ -71,7 +71,7 @@ class PDOOAuth2 extends OAuth2 {
             if ($client_secret === null)
                 return $result !== false;
 
-            return $result["pw"] == $client_secret;
+            return $result["client_secret"] == $client_secret;
         } catch (PDOException $e) {
             $this->handle_exception($e);
         }
@@ -95,11 +95,11 @@ class PDOOAuth2 extends OAuth2 {
         }
     }
 
-    protected function get_access_token($token_id) {
+    protected function get_access_token($oauth_token) {
         try {
-            $sql = "select client_id, expires, scope from tokens where id = :token_id";
+            $sql = "select client_id, expires, scope from tokens where oauth_token = :oauth_token";
             $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(":token_id", $token_id, PDO::PARAM_STR);
+            $stmt->bindParam(":oauth_token", $oauth_token, PDO::PARAM_STR);
             $stmt->execute();
 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -110,11 +110,11 @@ class PDOOAuth2 extends OAuth2 {
         }
     }
 
-    protected function store_access_token($token_id, $client_id, $expires, $scope = null) {
+    protected function store_access_token($oauth_token, $client_id, $expires, $scope = null) {
         try {
-            $sql = "insert into tokens (id, client_id, expires, scope) values (:id, :client_id, :expires, :scope)";
+            $sql = "insert into tokens (oauth_token, client_id, expires, scope) values (:oauth_token, :client_id, :expires, :scope)";
             $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(":id", $token_id, PDO::PARAM_STR);
+            $stmt->bindParam(":oauth_token", $oauth_token, PDO::PARAM_STR);
             $stmt->bindParam(":client_id", $client_id, PDO::PARAM_STR);
             $stmt->bindParam(":expires", $expires, PDO::PARAM_INT);
             $stmt->bindParam(":scope", $scope, PDO::PARAM_STR);
@@ -131,9 +131,9 @@ class PDOOAuth2 extends OAuth2 {
 
     protected function get_stored_auth_code($code) {
         try {
-            $sql = "select id, client_id, redirect_uri, expires, scope from auth_codes where id = :id";
+            $sql = "select code, client_id, redirect_uri, expires, scope from auth_codes where code = :code";
             $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(":id", $code, PDO::PARAM_STR);
+            $stmt->bindParam(":code", $code, PDO::PARAM_STR);
             $stmt->execute();
 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -146,11 +146,11 @@ class PDOOAuth2 extends OAuth2 {
 
     // Take the provided authorization code values and store them somewhere (db, etc.)
     // Required for AUTH_CODE_GRANT_TYPE
-    protected function store_auth_code($code, $client_id, $redirect_uri, $expires, $scope) {
+    protected function store_auth_code($code, $client_id, $redirect_uri, $expires, $scope = null) {
         try {
-            $sql = "insert into auth_codes (id, client_id, redirect_uri, expires, scope) values (:id, :client_id, :redirect_uri, :expires, :scope)";
+            $sql = "insert into auth_codes (code, client_id, redirect_uri, expires, scope) values (:code, :client_id, :redirect_uri, :expires, :scope)";
             $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(":id", $code, PDO::PARAM_STR);
+            $stmt->bindParam(":code", $code, PDO::PARAM_STR);
             $stmt->bindParam(":client_id", $client_id, PDO::PARAM_STR);
             $stmt->bindParam(":redirect_uri", $redirect_uri, PDO::PARAM_STR);
             $stmt->bindParam(":expires", $expires, PDO::PARAM_INT);
