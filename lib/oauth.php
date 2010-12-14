@@ -1,7 +1,7 @@
 <?php
 /**
  * http://code.google.com/p/oauth2-php/
- * 
+ *
  * By Tim Ridgely tim.ridgely@gmail.com
  * Updated to draft v10 by Aaron Parecki aaron@parecki.com
  */
@@ -271,7 +271,7 @@ abstract class OAuth2 {
     }
 
     private $old_refresh_token = '';
-    
+
     // Expire a used refresh token.
     // This is not explicitly required in the spec, but is almost implied. After granting a new refresh token,
     // the old one is no longer useful and so should be forcibly expired in the data store so it can't be used again.
@@ -280,9 +280,9 @@ abstract class OAuth2 {
         // for any sort of success/failure, so you should bail out of the
         // script and provide a descriptive fail message
 
-    	return;
+        return;
     }
-    
+
     // Grant access tokens for the "none" grant type
     // Not really described in the IETF Draft, so I just left a method stub...do whatever you want!
     // Required for NONE_GRANT_TYPE
@@ -442,7 +442,7 @@ abstract class OAuth2 {
         );
 
         $input = filter_input_array(INPUT_POST, $filters);
-        
+
         // Grant Type must be specified.
         if (!$input["grant_type"])
             $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_REQUEST, 'Invalid grant_type parameter or parameter missing');
@@ -503,13 +503,13 @@ abstract class OAuth2 {
 
                 if ($stored === null || $client[0] != $stored["client_id"])
                     $this->error(ERROR_BAD_REQUEST, ERROR_INVALID_GRANT);
-                    
+
                 if ($stored["expires"] < time())
                     $this->error(ERROR_BAD_REQUEST, ERROR_EXPIRED_TOKEN);
 
                 // store the refresh token locally so we can delete it when a new refresh token is generated
                 $this->old_refresh_token = $stored["token"];
-                    
+
                 break;
             case NONE_GRANT_TYPE:
                 $stored = $this->check_none_access($client[0]);
@@ -684,7 +684,7 @@ abstract class OAuth2 {
             $this->store_refresh_token($token["refresh_token"], $client_id, time() + $this->refresh_token_lifetime, $scope);
             // If we've granted a new refresh token, expire the old one
             if($this->old_refresh_token)
-	            $this->expire_refresh_token($this->old_refresh_token);
+                $this->expire_refresh_token($this->old_refresh_token);
         }
 
         return $token;
@@ -735,7 +735,7 @@ abstract class OAuth2 {
             $this->send_json_headers();
             $response = array("error" => $message);
             if(ERROR_VERBOSE && $description)
-            	$response["error_description"] = $description;
+                $response["error_description"] = $description;
             echo json_encode($response);
         }
 

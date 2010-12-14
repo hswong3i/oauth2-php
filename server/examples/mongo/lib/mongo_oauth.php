@@ -10,7 +10,7 @@
 define("MONGO_CONNECTION", "mongodb://user:pass@mongoserver/mydb");
 define("MONGO_DB", "mydb");
 
-include "oauth.php";
+include "../../../../lib/oauth.php";
 
 class MongoOAuth2 extends OAuth2 {
     private $db;

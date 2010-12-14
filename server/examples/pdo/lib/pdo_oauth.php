@@ -11,7 +11,7 @@ define("PDO_DSN", "mysql:dbname=mydb;host=localhost");
 define("PDO_USER", "user");
 define("PDO_PASS", "pass");
 
-include "oauth.php";
+include "../../../../lib/oauth.php";
 
 class PDOOAuth2 extends OAuth2 {
     private $db;
