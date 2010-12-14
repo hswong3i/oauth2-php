@@ -7,7 +7,7 @@
  *
  */
 
-require "lib/mongo_oauth.php";
+require "lib/MongoOAuth2.inc";
 
 $oauth = new MongoOAuth2();
 $oauth->grant_access_token();

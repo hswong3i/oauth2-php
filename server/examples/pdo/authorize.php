@@ -7,7 +7,7 @@
  *
  */
 
-require "lib/pdo_oauth.php";
+require "lib/PDOOAuth2.inc";
 
 $oauth = new PDOOAuth2();
 

@@ -9,7 +9,7 @@
 ini_set('display_errors', 1);
 error_reporting(-1);
 
-include "lib/pdo_oauth.php";
+include "lib/PDOOAuth2.inc";
 
 if ($_POST && isset($_POST["id"]) && isset($_POST["pw"]) && isset($_POST["uri"])) {
     $oauth = new PDOOAuth2();

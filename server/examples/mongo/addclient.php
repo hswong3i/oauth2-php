@@ -7,7 +7,7 @@
  *
  */
 
-include "lib/mongo_oauth.php";
+include "lib/MongoOAuth2.inc";
 
 if ($_POST && isset($_POST["id"]) && isset($_POST["pw"]) && isset($_POST["uri"])) {
     $oauth = new MongoOAuth2();
