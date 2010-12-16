@@ -1,73 +1,309 @@
 <?php
+
 /**
- * http://code.google.com/p/oauth2-php/
+ * @mainpage
+ * OAuth 2.0 server in PHP, originally written for
+ * <a href="http://www.opendining.net/"> Open Dining</a>. Supports
+ * <a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-10">IETF draft v10</a>.
  *
- * By Tim Ridgely tim.ridgely@gmail.com
- * Updated to draft v10 by Aaron Parecki aaron@parecki.com
+ * - By Tim Ridgely <tim.ridgely@gmail.com>.
+ * - Updated to draft v10 by Aaron Parecki <aaron@parecki.com>.
+ *
+ * @see http://code.google.com/p/oauth2-php/
  */
 
 ini_set('display_errors', 1);
 error_reporting(E_ALL | E_STRICT);
 
-// Regex to filter out the client identifier
-// (described in Section 2 of IETF draft)
-// IETF draft does not prescribe a format for these, however
-// I've arbitrarily chosen alphanumeric strings with hyphens and underscores, 3-32 characters long
-// Feel free to change.
+/**
+ * @defgroup oauth2_credentials Client Credentials
+ * @{
+ *
+ * When interacting with the authorization server, the client identifies
+ * itself using a client identifier and authenticates using a set of
+ * client credentials. This specification provides one mechanism for
+ * authenticating the client using password credentials.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-2
+ */
+
+/**
+ * Regex to filter out the client identifier (described in Section 2 of IETF draft).
+ *
+ * IETF draft does not prescribe a format for these, however I've arbitrarily
+ * chosen alphanumeric strings with hyphens and underscores, 3-32 characters
+ * long.
+ *
+ * Feel free to change.
+ */
 define("OAUTH2_CLIENT_ID_REGEXP", "/^[a-z0-9-_]{3,32}$/i");
 
-// Used to define the name of the OAuth access token parameter (POST/GET/etc.)
-// IETF Draft sections 5.2 and 5.3 specify that it should be called "oauth_token"
-// but other implementations use things like "access_token"
-// I won't be heartbroken if you change it, but it might be better to adhere to the spec
-define("OAUTH2_TOKEN_PARAM_NAME", "oauth_token");
+/**
+ * @}
+ */
 
-// Client types (for client authorization)
-//define("WEB_SERVER_CLIENT_TYPE", "web_server");
-//define("USER_AGENT_CLIENT_TYPE", "user_agent");
-//define("REGEX_CLIENT_TYPE", "/^(web_server|user_agent)$/");
+
+/**
+ * @defgroup oauth2_authorization Obtaining End-User Authorization
+ * @{
+ *
+ * When the client interacts with an end-user, the end-user MUST first
+ * grant the client authorization to access its protected resources.
+ * Once obtained, the end-user access grant is expressed as an
+ * authorization code which the client uses to obtain an access token.
+ * To obtain an end-user authorization, the client sends the end-user to
+ * the end-user authorization endpoint.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-3
+ */
+
+/**
+ * Denotes "token" authorization response type.
+ */
 define("OAUTH2_AUTH_RESPONSE_TYPE_ACCESS_TOKEN", "token");
+
+/**
+ * Denotes "code" authorization response type.
+ */
 define("OAUTH2_AUTH_RESPONSE_TYPE_AUTH_CODE", "code");
+
+/**
+ * Denotes "code-and-token" authorization response type.
+ */
 define("OAUTH2_AUTH_RESPONSE_TYPE_CODE_AND_TOKEN", "code-and-token");
+
+/**
+ * Regex to filter out the authorization response type.
+ */
 define("OAUTH2_AUTH_RESPONSE_TYPE_REGEXP", "/^(token|code|code-and-token)$/");
 
-// Grant Types (for token obtaining)
+/**
+ * @}
+ */
+
+
+/**
+ * @defgroup oauth2_access_token Obtaining an Access Token
+ * @{
+ *
+ * The client obtains an access token by authenticating with the
+ * authorization server and presenting its access grant (in the form of
+ * an authorization code, resource owner credentials, an assertion, or a
+ * refresh token).
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4
+ */
+
+/**
+ * Denotes "authorization_code" grant types (for token obtaining).
+ */
 define("OAUTH2_GRANT_TYPE_AUTH_CODE", "authorization_code");
+
+/**
+ * Denotes "password" grant types (for token obtaining).
+ */
 define("OAUTH2_GRANT_TYPE_USER_CREDENTIALS", "password");
+
+/**
+ * Denotes "assertion" grant types (for token obtaining).
+ */
 define("OAUTH2_GRANT_TYPE_ASSERTION", "assertion");
+
+/**
+ * Denotes "refresh_token" grant types (for token obtaining).
+ */
 define("OAUTH2_GRANT_TYPE_REFRESH_TOKEN", "refresh_token");
+
+/**
+ * Denotes "none" grant types (for token obtaining).
+ */
 define("OAUTH2_GRANT_TYPE_NONE", "none");
+
+/**
+ * Regex to filter out the grant type.
+ */
 define("OAUTH2_GRANT_TYPE_REGEXP", "/^(authorization_code|password|assertion|refresh_token|none)$/");
 
-/* Error handling constants */
+/**
+ * @}
+ */
 
-// HTTP status codes
+
+/**
+ * @defgroup oauth2_protected Accessing a Protected Resource
+ * @{
+ *
+ * Clients access protected resources by presenting an access token to
+ * the resource server. Access tokens act as bearer tokens, where the
+ * token string acts as a shared symmetric secret. This requires
+ * treating the access token with the same care as other secrets (e.g.
+ * end-user passwords). Access tokens SHOULD NOT be sent in the clear
+ * over an insecure channel.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5
+ */
+
+/**
+ * Used to define the name of the OAuth access token parameter (POST/GET/etc.).
+ *
+ * IETF Draft sections 5.1.2 and 5.1.3 specify that it should be called
+ * "oauth_token" but other implementations use things like "access_token".
+ *
+ * I won't be heartbroken if you change it, but it might be better to adhere
+ * to the spec.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5.1.2
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5.1.3
+ */
+define("OAUTH2_TOKEN_PARAM_NAME", "oauth_token");
+
+/**
+ * @}
+ */
+
+
+/**
+ * @defgroup oauth2_error Error handling
+ * @{
+ *
+ * @todo Extend for i18n.
+ */
+
+/**
+ * "Bad Request" HTTP status code.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.3
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5.2.1
+ */
 define("OAUTH2_ERROR_HTTP_BAD_REQUEST", "400 Bad Request");
+
+/**
+ * "Unauthorized" HTTP status code.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.3
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5.2.1
+ */
 define("OAUTH2_ERROR_HTTP_UNAUTHORIZED", "401 Unauthorized");
+
+/**
+ * "Forbidden" HTTP status code.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5.2.1
+ */
 define("OAUTH2_ERROR_HTTP_FORBIDDEN", "403 Forbidden");
 
-// TODO: Extend for i18n
-
-// "Official" OAuth 2.0 errors
+/**
+ * The request is missing a required parameter, includes an unsupported
+ * parameter or parameter value, or is otherwise malformed.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-3.2.1
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.3.1
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5.2.1
+ */
 define("OAUTH2_ERROR_INVALID_REQUEST", "invalid_request");
+
+/**
+ * The client identifier provided is invalid.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-3.2.1
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.3.1
+ */
 define("OAUTH2_ERROR_INVALID_CLIENT", "invalid_client");
+
+/**
+ * The client is not authorized to use the requested response type.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-3.2.1
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.3.1
+ */
 define("OAUTH2_ERROR_UNAUTHORIZED_CLIENT", "unauthorized_client");
+
+/**
+ * The redirection URI provided does not match a pre-registered value.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-3.2.1
+ */
 define("OAUTH2_ERROR_REDIRECT_URI_MISMATCH", "redirect_uri_mismatch");
+
+/**
+ * The end-user or authorization server denied the request.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-3.2.1
+ */
 define("OAUTH2_ERROR_USER_DENIED", "access_denied");
+
+/**
+ * The requested response type is not supported by the authorization server.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-3.2.1
+ */
 define("OAUTH2_ERROR_UNSUPPORTED_RESPONSE_TYPE", "unsupported_response_type");
+
+/**
+ * The requested scope is invalid, unknown, or malformed.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-3.2.1
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.3.1
+ */
 define("OAUTH2_ERROR_INVALID_SCOPE", "invalid_scope");
+
+/**
+ * The provided access grant is invalid, expired, or revoked (e.g. invalid
+ * assertion, expired authorization token, bad end-user password credentials,
+ * or mismatching authorization code and redirection URI).
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.3.1
+ */
 define("OAUTH2_ERROR_INVALID_GRANT", "invalid_grant");
 
-// Error for trying to use a grant type that we haven't implemented
+/**
+ * The access grant included - its type or another attribute - is not
+ * supported by the authorization server.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.3.1
+ */
 define("OAUTH2_ERROR_UNSUPPORTED_GRANT_TYPE", "unsupported_grant_type");
 
-// Protected resource errors
+/**
+ * The access token provided is invalid. Resource servers SHOULD use this
+ * error code when receiving an expired token which cannot be refreshed to
+ * indicate to the client that a new authorization is necessary. The resource
+ * server MUST respond with the HTTP 401 (Unauthorized) status code.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5.2.1
+ */
 define("OAUTH2_ERROR_INVALID_TOKEN", "invalid_token");
+
+/**
+ * The access token provided has expired. Resource servers SHOULD only use
+ * this error code when the client is expected to be able to handle the
+ * response and request a new access token using the refresh token issued
+ * with the expired access token. The resource server MUST respond with the
+ * HTTP 401 (Unauthorized) status code.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5.2.1
+ */
 define("OAUTH2_ERROR_EXPIRED_TOKEN", "expired_token");
+
+/**
+ * The request requires higher privileges than provided by the access token.
+ * The resource server SHOULD respond with the HTTP 403 (Forbidden) status
+ * code and MAY include the "scope" attribute with the scope necessary to
+ * access the protected resource.
+ *
+ * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-5.2.1
+ */
 define("OAUTH2_ERROR_INSUFFICIENT_SCOPE", "insufficient_scope");
 
-// Whether to show verbose error messages in the JSON response
+/**
+ * Whether to show verbose error messages in the JSON response.
+ */
 define("OAUTH2_ERROR_VERBOSE", TRUE);
+
+/**
+ * @}
+ */
+
 
 abstract class OAuth2 {
 
