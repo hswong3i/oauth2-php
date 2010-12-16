@@ -10,4 +10,4 @@
 require "lib/PDOOAuth2.inc";
 
 $oauth = new PDOOAuth2();
-$oauth->grant_access_token();
+$oauth->grantAccessToken();

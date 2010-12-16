@@ -10,18 +10,18 @@
 require "lib/PDOOAuth2.inc";
 
 $oauth = new PDOOAuth2();
-$oauth->verify_access_token();
+$oauth->verifyAccessToken();
 
 // With a particular scope, you'd do:
-// $oauth->verify_access_token("scope_name");
+// $oauth->verifyAccessToken("scope_name");
 
 ?>
 
 <html>
-    <head>
-        <title>Hello!</title>
-    </head>
-    <body>
-        <p>This is a secret.</p>
-    </body>
+  <head>
+    <title>Hello!</title>
+  </head>
+  <body>
+    <p>This is a secret.</p>
+  </body>
 </html>
