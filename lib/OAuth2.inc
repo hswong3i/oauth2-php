@@ -309,32 +309,65 @@ abstract class OAuth2 {
 
   /* Subclasses must implement the following functions */
 
-  // Make sure that the client id is valid
-  // If a secret is required, check that they've given the right one
-  // Must return FALSE if the client credentials are invalid
+  /**
+   * Make sure that the client credentials is valid.
+   *
+   * @param $client_id
+   *   Client identifier to be check with.
+   * @param $client_secret
+   *   (optional) If a secret is required, check that they've given the right one.
+   *
+   * @return
+   *   TRUE if client credentials are valid, and MUST return FALSE if invalid.
+   */
   abstract protected function checkClientCredentials($client_id, $client_secret = NULL);
 
-  // OAuth says we should store request URIs for each registered client
-  // Implement this function to grab the stored URI for a given client id
-  // Must return FALSE if the given client does not exist or is invalid
+  /**
+   * Get the registered redirect URI of corresponding client_id.
+   *
+   * OAuth says we should store request URIs for each registered client.
+   * Implement this function to grab the stored URI for a given client id.
+   *
+   * @param $client_id
+   *   Client identifier to be check with.
+   *
+   * @return
+   *   Registered redirect URI of corresponding client identifier, and MUST
+   *   return FALSE if the given client does not exist or is invalid.
+   */
   abstract protected function getRedirectUri($client_id);
 
-  // We need to store and retrieve access token data as we create and verify tokens
-  // Implement these functions to do just that
-
-  // Look up the supplied token id from storage, and return an array like:
-  //
-  // array(
-  //   "client_id" => <stored client id>,
-  //   "expires" => <stored expiration timestamp>,
-  //   "scope" => <stored scope (may be NULL)
-  // )
-  //
-  // Return NULL if the supplied token is invalid
-  //
+  /**
+   * Look up the supplied oauth_token from storage.
+   *
+   * We need to retrieve access token data as we create and verify tokens.
+   *
+   * @param $oauth_token
+   *   oauth_token to be check with.
+   *
+   * @return
+   *   An associative array as below, and return NULL if the supplied oauth_token
+   *   is invalid:
+   *   - client_id: Stored client identifier.
+   *   - expires: Stored expiration in unix timestamp.
+   *   - scope: (optional) Stored scope values in space-separated string.
+   */
   abstract protected function getAccessToken($oauth_token);
 
-  // Store the supplied values
+  /**
+   * Store the supplied access token values to storage.
+   *
+   * We need to store access token data as we create and verify tokens.
+   *
+   * @param $oauth_token
+   *   oauth_token to be stored.
+   * @param $client_id
+   *   Client identifier to be stored.
+   * @param $expires
+   *   Expiration to be stored.
+   * @param $scope
+   *   (optional) Scopes to be stored in space-separated string.
+   */
   abstract protected function setAccessToken($oauth_token, $client_id, $expires, $scope = NULL);
 
   /*
@@ -348,22 +381,44 @@ abstract class OAuth2 {
    *
    */
 
-  // You should override this function with something,
-  // or else your OAuth provider won't support any grant types!
+  /**
+   * Return supported grant types.
+   *
+   * You should override this function with something, or else your OAuth
+   * provider won't support any grant types!
+   *
+   * @return
+   *   A list as below. If you support all grant types, then you'd do:
+   * @code
+   * return array(
+   *   OAUTH2_GRANT_TYPE_AUTH_CODE,
+   *   OAUTH2_GRANT_TYPE_USER_CREDENTIALS,
+   *   OAUTH2_GRANT_TYPE_ASSERTION,
+   *   OAUTH2_GRANT_TYPE_REFRESH_TOKEN,
+   *   OAUTH2_GRANT_TYPE_NONE,
+   * );
+   * @endcode
+   */
   protected function getSopportedGrantTypes() {
-    // If you support all grant types, then you'd do:
-    // return array(
-    //   OAUTH2_GRANT_TYPE_AUTH_CODE,
-    //   OAUTH2_GRANT_TYPE_USER_CREDENTIALS,
-    //   OAUTH2_GRANT_TYPE_ASSERTION,
-    //   OAUTH2_GRANT_TYPE_REFRESH_TOKEN,
-    //   OAUTH2_GRANT_TYPE_NONE
-    // );
-
     return array();
   }
 
-  // You should override this function with your supported response types
+  /**
+   * Return supported authorization response types.
+   *
+   * You should override this function with your supported response types.
+   *
+   * @return
+   *   A list as below. If you support all authorization response types,
+   *   then you'd do:
+   * @code
+   * return array(
+   *   OAUTH2_AUTH_RESPONSE_TYPE_AUTH_CODE,
+   *   OAUTH2_AUTH_RESPONSE_TYPE_ACCESS_TOKEN,
+   *   OAUTH2_AUTH_RESPONSE_TYPE_CODE_AND_TOKEN,
+   * );
+   * @endcode
+   */
   protected function getSupportedAuthResponseTypes() {
     return array(
       OAUTH2_AUTH_RESPONSE_TYPE_AUTH_CODE,
@@ -372,157 +427,288 @@ abstract class OAuth2 {
     );
   }
 
-  // If you want to support scope use, then have this function return a list
-  // of all acceptable scopes (used to throw the invalid-scope error)
+  /**
+   * Return supported scopes.
+   *
+   * If you want to support scope use, then have this function return a list
+   * of all acceptable scopes (used to throw the invalid-scope error).
+   *
+   * @return
+   *   A list as below, for example:
+   * @code
+   * return array(
+   *   'my-friends',
+   *   'photos',
+   *   'whatever-else',
+   * );
+   * @endcode
+   */
   protected function getSupportedScopes() {
-    // Example:
-    // return array("my-friends", "photos", "whatever-else");
     return array();
   }
 
-  // If you want to restrict clients to certain authorization response types,
-  // override this function
-  // Given a client identifier and auth type, return TRUE or FALSE
-  // (auth type would be one of the values contained in OAUTH2_AUTH_RESPONSE_TYPE_REGEXP)
+  /**
+   * Check restricted authorization response types of corresponding Client
+   * identifier.
+   *
+   * If you want to restrict clients to certain authorization response types,
+   * override this function.
+   *
+   * @param $client_id
+   *   Client identifier to be check with.
+   * @param $response_type
+   *   Authorization response type to be check with, would be one of the
+   *   values contained in OAUTH2_AUTH_RESPONSE_TYPE_REGEXP.
+   *
+   * @return
+   *   TRUE if the authorization response type is supported by this
+   *   client identifier, and FALSE if it isn't.
+   */
   protected function checkRestrictedClientResponseTypes($client_id, $response_type) {
     return TRUE;
   }
 
-  // If you want to restrict clients to certain grant types, override this function
-  // Given a client identifier and grant type, return TRUE or FALSE
+  /**
+   * Check restricted grant types of corresponding client identifier.
+   *
+   * If you want to restrict clients to certain grant types, override this
+   * function.
+   *
+   * @param $clien_id
+   *   Client identifier to be check with.
+   * @param $grant_type
+   *   Grant type to be check with, would be one of the values contained in
+   *   OAUTH2_GRANT_TYPE_REGEXP.
+   *
+   * @return
+   *   TRUE if the grant type is supported by this client identifier, and
+   *   FALSE if it isn't.
+   */
   protected function checkRestrictedClientGrantTypes($client_id, $grant_type) {
     return TRUE;
   }
 
   /* Functions that help grant access tokens for various grant types */
 
-  // Fetch authorization code data (probably the most common grant type)
-  // IETF Draft 4.1.1: http://tools.ietf.org/html/draft-ietf-oauth-v2-08#section-4.1.1
-  // Required for OAUTH2_GRANT_TYPE_AUTH_CODE
+  /**
+   * Fetch authorization code data (probably the most common grant type).
+   *
+   * Retrieve the stored data for the given authorization code.
+   *
+   * Required for OAUTH2_GRANT_TYPE_AUTH_CODE.
+   *
+   * @param $code
+   *   Authorization code to be check with.
+   *
+   * @return
+   *   An associative array as below, and NULL if the code is invalid:
+   *   - client_id: Stored client identifier.
+   *   - redirect_uri: Stored redirect URI.
+   *   - expires: Stored expiration in unix timestamp.
+   *   - scope: (optional) Stored scope values in space-separated string.
+   *
+   * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.1.1
+   * @ingroup oauth2_access_token
+   */
   protected function getAuthCode($code) {
-    // Retrieve the stored data for the given authorization code
-    // Should return:
-    //
-    // array (
-    //   "client_id" => <stored client id>,
-    //   "redirect_uri" => <stored redirect URI>,
-    //   "expires" => <stored code expiration time>,
-    //   "scope" => <stored scope values (space-separated string), or can be omitted if scope is unused>
-    // )
-    //
-    // Return NULL if the code is invalid.
-
     return NULL;
   }
 
-  // Take the provided authorization code values and store them somewhere (db, etc.)
-  // Required for OAUTH2_GRANT_TYPE_AUTH_CODE
+  /**
+   * Take the provided authorization code values and store them somewhere.
+   *
+   * This function should be the storage counterpart to getAuthCode().
+   *
+   * If storage fails for some reason, we're not currently checking for
+   * any sort of success/failure, so you should bail out of the script
+   * and provide a descriptive fail message.
+   *
+   * Required for OAUTH2_GRANT_TYPE_AUTH_CODE.
+   *
+   * @param $code
+   *   Authorization code to be stored.
+   * @param $client_id
+   *   Client identifier to be stored.
+   * @param $redirect_uri
+   *   Redirect URI to be stored.
+   * @param $expires
+   *   Expiration to be stored.
+   * @param $scope
+   *   (optional) Scopes to be stored in space-separated string.
+   *
+   * @ingroup oauth2_access_token
+   */
   protected function setAuthCode($code, $client_id, $redirect_uri, $expires, $scope = NULL) {
-    // This function should be the storage counterpart to getAuthCode
-
-    // If storage fails for some reason, we're not currently checking
-    // for any sort of success/failure, so you should bail out of the
-    // script and provide a descriptive fail message
   }
 
-  // Grant access tokens for basic user credentials
-  // IETF Draft 4.1.2: http://tools.ietf.org/html/draft-ietf-oauth-v2-08#section-4.1.2
-  // Required for OAUTH2_GRANT_TYPE_USER_CREDENTIALS
+  /**
+   * Grant access tokens for basic user credentials.
+   *
+   * Check the supplied username and password for validity.
+   *
+   * You can also use the $client_id param to do any checks required based
+   * on a client, if you need that.
+   *
+   * Required for OAUTH2_GRANT_TYPE_USER_CREDENTIALS.
+   *
+   * @param $client_id
+   *   Client identifier to be check with.
+   * @param $username
+   *   Username to be check with.
+   * @param $password
+   *   Password to be check with.
+   *
+   * @return
+   *   TRUE if the username and password are valid, and FALSE if it isn't.
+   *   Moreover, if the username and password are valid, and you want to
+   *   verify the scope of a user's access, return an associative array
+   *   with the scope values as below. We'll check the scope you provide
+   *   against the requested scope before providing an access token:
+   * @code
+   * return array(
+   *   'scope' => <stored scope values (space-separated string)>,
+   * );
+   * @endcode
+   *
+   * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.1.2
+   * @ingroup oauth2_access_token
+   */
   protected function checkUserCredentials($client_id, $username, $password) {
-    // Check the supplied username and password for validity
-    // You can also use the $client_id param to do any checks required
-    // based on a client, if you need that
-    // If the username and password are invalid, return FALSE
-
-    // If the username and password are valid, and you want to verify the scope of
-    // a user's access, return an array with the scope values, like so:
-    //
-    // array (
-    //  "scope" => <stored scope values (space-separated string)>
-    // )
-    //
-    // We'll check the scope you provide against the requested scope before
-    // providing an access token.
-    //
-    // Otherwise, just return TRUE.
-
     return FALSE;
   }
 
-  // Grant access tokens for assertions
-  // IETF Draft 4.1.3: http://tools.ietf.org/html/draft-ietf-oauth-v2-08#section-4.1.3
-  // Required for OAUTH2_GRANT_TYPE_ASSERTION
+  /**
+   * Grant access tokens for assertions.
+   *
+   * Check the supplied assertion for validity.
+   *
+   * You can also use the $client_id param to do any checks required based
+   * on a client, if you need that.
+   *
+   * Required for OAUTH2_GRANT_TYPE_ASSERTION.
+   *
+   * @param $client_id
+   *   Client identifier to be check with.
+   * @param $assertion_type
+   *   The format of the assertion as defined by the authorization server.
+   * @param $assertion
+   *   The assertion.
+   *
+   * @return
+   *   TRUE if the assertion is valid, and FALSE if it isn't. Moreover, if
+   *   the assertion is valid, and you want to verify the scope of an access
+   *   request, return an associative array with the scope values as below.
+   *   We'll check the scope you provide against the requested scope before
+   *   providing an access token:
+   * @code
+   * return array(
+   *   'scope' => <stored scope values (space-separated string)>,
+   * );
+   * @endcode
+   *
+   * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.1.3
+   * @ingroup oauth2_access_token
+   */
   protected function checkAssertion($client_id, $assertion_type, $assertion) {
-    // Check the supplied assertion for validity
-    // You can also use the $client_id param to do any checks required
-    // based on a client, if you need that
-    // If the assertion is invalid, return FALSE
-
-    // If the assertion is valid, and you want to verify the scope of
-    // an access request, return an array with the scope values, like so:
-    //
-    // array (
-    //  "scope" => <stored scope values (space-separated string)>
-    // )
-    //
-    // We'll check the scope you provide against the requested scope before
-    // providing an access token.
-    //
-    // Otherwise, just return TRUE.
-
     return FALSE;
   }
 
-  // Grant refresh access tokens
-  // IETF Draft 4.1.4: http://tools.ietf.org/html/draft-ietf-oauth-v2-08#section-4.1.4
-  // Required for OAUTH2_GRANT_TYPE_REFRESH_TOKEN
+  /**
+   * Grant refresh access tokens.
+   *
+   * Retrieve the stored data for the given refresh token.
+   *
+   * Required for OAUTH2_GRANT_TYPE_REFRESH_TOKEN.
+   *
+   * @param $refresh_token
+   *   Refresh token to be check with.
+   *
+   * @return
+   *   An associative array as below, and NULL if the refresh_token is
+   *   invalid:
+   *   - client_id: Stored client identifier.
+   *   - expires: Stored expiration unix timestamp.
+   *   - scope: (optional) Stored scope values in space-separated string.
+   *
+   * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-4.1.4
+   * @ingroup oauth2_access_token
+   */
   protected function getRefreshToken($refresh_token) {
-    // Retrieve the stored data for the given refresh token
-    // Should return:
-    //
-    // array (
-    //  "client_id" => <stored client id>,
-    //  "expires" => <refresh token expiration time>,
-    //  "scope" => <stored scope values (space-separated string), or can be omitted if scope is unused>
-    // )
-    //
-    // Return NULL if the token id is invalid.
-
     return NULL;
   }
 
-  // Store refresh access tokens
-  // Required for OAUTH2_GRANT_TYPE_REFRESH_TOKEN
-  protected function setRefreshToken($token, $client_id, $expires, $scope = NULL) {
-    // If storage fails for some reason, we're not currently checking
-    // for any sort of success/failure, so you should bail out of the
-    // script and provide a descriptive fail message
-
+  /**
+   * Take the provided refresh token values and store them somewhere.
+   *
+   * This function should be the storage counterpart to getRefreshToken().
+   *
+   * If storage fails for some reason, we're not currently checking for
+   * any sort of success/failure, so you should bail out of the script
+   * and provide a descriptive fail message.
+   *
+   * Required for OAUTH2_GRANT_TYPE_REFRESH_TOKEN.
+   *
+   * @param $refresh_token
+   *   Refresh token to be stored.
+   * @param $client_id
+   *   Client identifier to be stored.
+   * @param $expires
+   *   expires to be stored.
+   * @param $scope
+   *   (optional) Scopes to be stored in space-separated string.
+   *
+   * @ingroup oauth2_access_token
+   */
+  protected function setRefreshToken($refresh_token, $client_id, $expires, $scope = NULL) {
     return;
   }
 
   private $old_refresh_token = '';
 
-  // Expire a used refresh token.
-  // This is not explicitly required in the spec, but is almost implied. After granting a new refresh token,
-  // the old one is no longer useful and so should be forcibly expired in the data store so it can't be used again.
-  protected function expirseRefreshToken($token) {
-    // If storage fails for some reason, we're not currently checking
-    // for any sort of success/failure, so you should bail out of the
-    // script and provide a descriptive fail message
-
+  /**
+   * Expire a used refresh token.
+   *
+   * This is not explicitly required in the spec, but is almost implied.
+   * After granting a new refresh token, the old one is no longer useful and
+   * so should be forcibly expired in the data store so it can't be used again.
+   *
+   * If storage fails for some reason, we're not currently checking for
+   * any sort of success/failure, so you should bail out of the script
+   * and provide a descriptive fail message.
+   *
+   * @param $refresh_token
+   *   Refresh token to be expirse.
+   *
+   * @ingroup oauth2_access_token
+   */
+  protected function unsetRefreshToken($refresh_token) {
     return;
   }
 
-  // Grant access tokens for the "none" grant type
-  // Not really described in the IETF Draft, so I just left a method stub...do whatever you want!
-  // Required for OAUTH2_GRANT_TYPE_NONE
+  /**
+   * Grant access tokens for the "none" grant type.
+   *
+   * Not really described in the IETF Draft, so I just left a method
+   * stub... Do whatever you want!
+   *
+   * Required for OAUTH2_GRANT_TYPE_NONE.
+   *
+   * @ingroup oauth2_access_token
+   */
   protected function checkNoneAccess($client_id) {
     return FALSE;
   }
 
+  /**
+   * Get default authentication realm for WWW-Authenticate header.
+   *
+   * Change this to whatever authentication realm you want to send in a
+   * WWW-Authenticate header.
+   *
+   * @return
+   *   A string that you want to send in a WWW-Authenticate header.
+   */
   protected function getDefaultAuthenticationRealm() {
-    // Change this to whatever authentication realm you want to send in a WWW-Authenticate header
     return "Service";
   }
 
@@ -832,7 +1018,7 @@ abstract class OAuth2 {
 
     // type and client_id are required
     if (!$input["response_type"])
-      $this->errorCallback($input["redirect_uri"], OAUTH2_ERROR_INVALID_REQUEST, $input["state"]);
+      $this->errorCallback($input["redirect_uri"], OAUTH2_ERROR_INVALID_REQUEST, $input["state"], 'Invalid response type.');
 
     // Check requested auth response type against the list of supported types
     if (array_search($input["response_type"], $this->getSupportedAuthResponseTypes()) === FALSE)
@@ -920,7 +1106,7 @@ abstract class OAuth2 {
       $this->setRefreshToken($token["refresh_token"], $client_id, time() + $this->refresh_token_lifetime, $scope);
       // If we've granted a new refresh token, expire the old one
       if ($this->old_refresh_token)
-        $this->expirseRefreshToken($this->old_refresh_token);
+        $this->unsetRefreshToken($this->old_refresh_token);
     }
 
     return $token;
@@ -935,11 +1121,11 @@ abstract class OAuth2 {
   // Implementing classes may want to override these two functions
   // to implement other access token or auth code generation schemes
   protected function genAccessToken() {
-    return base64_encode(pack('N6', mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand()));
+    return md5(base64_encode(pack('N6', mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), uniqid())));
   }
 
   protected function genAuthCode() {
-    return base64_encode(pack('N6', mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand()));
+    return md5(base64_encode(pack('N6', mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), uniqid())));
   }
 
   // Implementing classes may need to override this function for use on non-Apache web servers
