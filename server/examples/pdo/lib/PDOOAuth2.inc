@@ -126,7 +126,7 @@ class PDOOAuth2 extends OAuth2 {
     }
 
     protected function get_supported_grant_types() {
-        return array(AUTH_CODE_GRANT_TYPE);
+        return array(OAUTH2_GRANT_TYPE_AUTH_CODE);
     }
 
     protected function get_stored_auth_code($code) {
@@ -145,7 +145,7 @@ class PDOOAuth2 extends OAuth2 {
     }
 
     // Take the provided authorization code values and store them somewhere (db, etc.)
-    // Required for AUTH_CODE_GRANT_TYPE
+    // Required for OAUTH2_GRANT_TYPE_AUTH_CODE
     protected function store_auth_code($code, $client_id, $redirect_uri, $expires, $scope = null) {
         try {
             $sql = "insert into auth_codes (code, client_id, redirect_uri, expires, scope) values (:code, :client_id, :redirect_uri, :expires, :scope)";
