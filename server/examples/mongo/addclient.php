@@ -1,10 +1,10 @@
 <?php
 
-/*
- *
+/**
+ * @file
  * Sample client add script.
- * Obviously not production-ready code, just simple and to the point.
  *
+ * Obviously not production-ready code, just simple and to the point.
  */
 
 include "lib/MongoOAuth2.inc";
@@ -32,7 +32,6 @@ if ($_POST && isset($_POST["client_id"]) && isset($_POST["client_secret"]) && is
         <label for="redirect_uri">Redirect URI:</label>
         <input type="text" name="redirect_uri" id="redirect_uri" />
       </p>
-
       <input type="submit" value="Submit" />
     </form>
   </body>

@@ -1,21 +1,27 @@
 <?php
 
-/*
- *
- * Sample OAuth2 Library PDO DB Implementation
- *
+/**
+ * @file
+ * Sample OAuth2 Library PDO DB Implementation.
  */
 
-// Set these values to your database access info
+// Set these values to your database access info.
 define("PDO_DSN", "mysql:dbname=mydb;host=localhost");
 define("PDO_USER", "user");
 define("PDO_PASS", "pass");
 
 include "../../../lib/oauth.php";
 
+/**
+ * OAuth2 Library PDO DB Implementation.
+ */
 class PDOOAuth2 extends OAuth2 {
+
   private $db;
 
+  /**
+   * Overrides OAuth2::__construct().
+   */
   public function __construct() {
     parent::__construct();
 
@@ -26,17 +32,34 @@ class PDOOAuth2 extends OAuth2 {
     }
   }
 
+  /**
+   * Release DB connection during destruct.
+   */
   function __destruct() {
     $this->db = NULL; // Release db connection
   }
 
+  /**
+   * Handle PDO exceptional cases.
+   */
   private function handleException($e) {
     echo "Database error: " . $e->getMessage();
     exit;
   }
 
-  // Little helper function to add a new client to the database
-  // Do NOT use this in production!  This sample code stores the secret in plaintext!
+  /**
+   * Little helper function to add a new client to the database.
+   *
+   * Do NOT use this in production! This sample code stores the secret
+   * in plaintext!
+   *
+   * @param $client_id
+   *   Client identifier to be stored.
+   * @param $client_secret
+   *   Client secret to be stored.
+   * @param $redirect_uri
+   *   Redirect URI to be stored.
+   */
   public function addClient($client_id, $client_secret, $redirect_uri) {
     try {
       $sql = "INSERT INTO clients (client_id, client_secret, redirect_uri) VALUES (:client_id, :client_secret, :redirect_uri)";
@@ -50,15 +73,12 @@ class PDOOAuth2 extends OAuth2 {
     }
   }
 
-  /*
+  /**
+   * Implements OAuth2::checkClientCredentials().
    *
-   * Below, we've implemented the required OAuth2 methods
-   * which are either declared as abstract or meant to be
-   * overridden in the base class.
-   *
+   * Do NOT use this in production! This sample code stores the secret
+   * in plaintext!
    */
-
-  // Do NOT use this in production!  This sample code stores the secret in plaintext!
   protected function checkClientCredentials($client_id, $client_secret = NULL) {
     try {
       $sql = "SELECT client_secret FROM clients WHERE client_id = :client_id";
@@ -77,6 +97,9 @@ class PDOOAuth2 extends OAuth2 {
     }
   }
 
+  /**
+   * Implements OAuth2::getRedirectUri().
+   */
   protected function getRedirectUri($client_id) {
     try {
       $sql = "SELECT redirect_uri FROM clients WHERE client_id = :client_id";
@@ -95,6 +118,9 @@ class PDOOAuth2 extends OAuth2 {
     }
   }
 
+  /**
+   * Implements OAuth2::getAccessToken().
+   */
   protected function getAccessToken($oauth_token) {
     try {
       $sql = "SELECT client_id, expires, scope FROM tokens WHERE oauth_token = :oauth_token";
@@ -110,6 +136,9 @@ class PDOOAuth2 extends OAuth2 {
     }
   }
 
+  /**
+   * Implements OAuth2::setAccessToken().
+   */
   protected function setAccessToken($oauth_token, $client_id, $expires, $scope = NULL) {
     try {
       $sql = "INSERT INTO tokens (oauth_token, client_id, expires, scope) VALUES (:oauth_token, :client_id, :expires, :scope)";
@@ -125,12 +154,18 @@ class PDOOAuth2 extends OAuth2 {
     }
   }
 
+  /**
+   * Overrides OAuth2::getSupportedGrantTypes().
+   */
   protected function getSupportedGrantTypes() {
     return array(
       OAUTH2_GRANT_TYPE_AUTH_CODE,
     );
   }
 
+  /**
+   * Overrides OAuth2::getAuthCode().
+   */
   protected function getAuthCode($code) {
     try {
       $sql = "SELECT code, client_id, redirect_uri, expires, scope FROM auth_codes WHERE code = :code";
@@ -146,8 +181,9 @@ class PDOOAuth2 extends OAuth2 {
     }
   }
 
-  // Take the provided authorization code values and store them somewhere (db, etc.)
-  // Required for OAUTH2_GRANT_TYPE_AUTH_CODE
+  /**
+   * Overrides OAuth2::setAuthCode().
+   */
   protected function setAuthCode($code, $client_id, $redirect_uri, $expires, $scope = NULL) {
     try {
       $sql = "INSERT INTO auth_codes (code, client_id, redirect_uri, expires, scope) VALUES (:code, :client_id, :redirect_uri, :expires, :scope)";

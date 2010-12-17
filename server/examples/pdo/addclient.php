@@ -1,10 +1,10 @@
 <?php
 
-/*
- *
+/**
+ * @file
  * Sample client add script.
- * Obviously not production-ready code, just simple and to the point.
  *
+ * Obviously not production-ready code, just simple and to the point.
  */
 
 include "lib/PDOOAuth2.inc";
