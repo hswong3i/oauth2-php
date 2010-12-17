@@ -12,14 +12,7 @@ require "lib/PDOOAuth2.inc";
 $oauth = new PDOOAuth2();
 
 if ($_POST) {
-  $is_authorized = $_POST["accept"] == "Yep";
-  $type = $_POST["response_type"];
-  $client_id = $_POST["client_id"];
-  $redirect_uri = $_POST["redirect_uri"];
-  $state = $_POST["state"];
-  $scope = $_POST["scope"];
-
-  $oauth->finishClientAuthorization($is_authorized, $type, $client_id, $redirect_uri, $state, $scope);
+  $oauth->finishClientAuthorization($_POST["accept"] == "Yep", $_POST);
 }
 
 $auth_params = $oauth->getAuthorizeParams();

@@ -125,7 +125,7 @@ class PDOOAuth2 extends OAuth2 {
     }
   }
 
-  protected function getSopportedGrantTypes() {
+  protected function getSupportedGrantTypes() {
     return array(
       OAUTH2_GRANT_TYPE_AUTH_CODE,
     );
