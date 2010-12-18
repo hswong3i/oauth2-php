@@ -6,9 +6,22 @@
  * <a href="http://www.opendining.net/"> Open Dining</a>. Supports
  * <a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-10">IETF draft v10</a>.
  *
- * - By Tim Ridgely <tim.ridgely@gmail.com>.
- * - Updated to draft v10 by Aaron Parecki <aaron@parecki.com>.
- * - Debug, coding style clean up and documented by Edison Wong <hswong3i@pantarei-design.com>.
+ * Source repo has sample servers implementations for
+ * <a href="http://php.net/manual/en/book.pdo.php"> PHP Data Objects</a> and
+ * <a href="http://www.mongodb.org/">MongoDB</a>. Easily adaptable to other
+ * storage engines.
+ *
+ * PHP Data Objects supports a variety of databases, including MySQL,
+ * Microsoft SQL Server, SQLite, and Oracle, so you can try out the sample
+ * to see how it all works.
+ *
+ * We're expanding the wiki to include more helpful documentation, but for
+ * now, your best bet is to view the oauth.php source - it has lots of
+ * comments.
+ *
+ * @author Tim Ridgely <tim.ridgely@gmail.com>
+ * @author Aaron Parecki <aaron@parecki.com>
+ * @author Edison Wong <hswong3i@pantarei-design.com>
  *
  * @see http://code.google.com/p/oauth2-php/
  */
@@ -324,10 +337,14 @@ define("OAUTH2_ERROR_VERBOSE", TRUE);
 
 /**
  * OAuth2.0 draft v10 server-side implementation.
+ *
+ * @author Originally written by Tim Ridgely <tim.ridgely@gmail.com>.
+ * @author Updated to draft v10 by Aaron Parecki <aaron@parecki.com>.
+ * @author Debug, coding style clean up and documented by Edison Wong <hswong3i@pantarei-design.com>.
  */
 abstract class OAuth2 {
 
-  /* Subclasses must implement the following functions */
+  // Subclasses must implement the following functions.
 
   /**
    * Make sure that the client credentials is valid.
@@ -400,16 +417,12 @@ abstract class OAuth2 {
    */
   abstract protected function setAccessToken($oauth_token, $client_id, $expires, $scope = NULL);
 
-  /*
-   *
-   * Stuff that should get overridden by subclasses
-   *
-   * I don't want to make these abstract, because then subclasses would have
-   * to implement all of them, which is too much work.
-   *
-   * So they're just stubs.  Override the ones you need.
-   *
-   */
+  // Stuff that should get overridden by subclasses.
+  //
+  // I don't want to make these abstract, because then subclasses would have
+  // to implement all of them, which is too much work.
+  //
+  // So they're just stubs. Override the ones you need.
 
   /**
    * Return supported grant types.
@@ -512,7 +525,7 @@ abstract class OAuth2 {
    * If you want to restrict clients to certain grant types, override this
    * function.
    *
-   * @param $clien_id
+   * @param $client_id
    *   Client identifier to be check with.
    * @param $grant_type
    *   Grant type to be check with, would be one of the values contained in
@@ -528,7 +541,7 @@ abstract class OAuth2 {
     return TRUE;
   }
 
-  /* Functions that help grant access tokens for various grant types */
+  // Functions that help grant access tokens for various grant types.
 
   /**
    * Fetch authorization code data (probably the most common grant type).
@@ -756,7 +769,7 @@ abstract class OAuth2 {
     return "Service";
   }
 
-  /* End stuff that should get overridden */
+  // End stuff that should get overridden.
 
   /**
    * The duration in seconds of the access token lifetime.
@@ -852,6 +865,15 @@ abstract class OAuth2 {
 
   /**
    * Creates an OAuth2.0 server-side instance.
+   *
+   * @param $config
+   *   An associative array as below:
+   *   - access_token_lifetime: (optional) The lifetime of access token in
+   *     seconds.
+   *   - auth_code_lifetime: (optional) The lifetime of authorization code in
+   *     seconds.
+   *   - refresh_token_lifetime: (optional) The lifetime of refresh token in
+   *     seconds.
    */
   public function __construct($config = array()) {
     $this->setAccessTokenLifetime(isset($config['access_token_lifetime']) ? $config['access_token_lifetime'] : $this->getAccessTokenLifetime());
@@ -859,7 +881,7 @@ abstract class OAuth2 {
     $this->setRefreshTokenLifetime(isset($config['refresh_token_lifetime']) ? $config['refresh_token_lifetime'] : $this->getRefreshTokenLifetime());
   }
 
-  /* Resource protecting (Section 5) */
+  // Resource protecting (Section 5).
 
   /**
    * Check that a valid access token has been provided.
@@ -878,7 +900,7 @@ abstract class OAuth2 {
    * @param $scope
    *   A space-separated string of required scope(s), if you want to check
    *   for scope.
-   * @param $exit_no_present
+   * @param $exit_not_present
    *   If TRUE and no access token is provided, send a 401 header and exit,
    *   otherwise return FALSE.
    * @param $exit_invalid
@@ -980,7 +1002,7 @@ abstract class OAuth2 {
       return $matches[1];
     }
 
-    if (isset($_GET[OAUTH2_TOKEN_PARAM_NAME]))  {
+    if (isset($_GET[OAUTH2_TOKEN_PARAM_NAME])) {
       if (isset($_POST[OAUTH2_TOKEN_PARAM_NAME])) // Both GET and POST are not allowed
         $this->errorJsonResponse(OAUTH2_HTTP_BAD_REQUEST, OAUTH2_ERROR_INVALID_REQUEST, 'Only send the token in GET or POST, not both');
 
@@ -993,7 +1015,7 @@ abstract class OAuth2 {
     return FALSE;
   }
 
-  /* Access token granting (Section 4) */
+  // Access token granting (Section 4).
 
   /**
    * Grant or deny a requested access token.
@@ -1146,7 +1168,7 @@ abstract class OAuth2 {
     $this->errorJsonResponse(OAUTH2_HTTP_BAD_REQUEST, OAUTH2_ERROR_INVALID_CLIENT);
   }
 
-  /* End-user/client Authorization (Section 3 of IETF Draft) */
+  // End-user/client Authorization (Section 3 of IETF Draft).
 
   /**
    * Pull the authorization request data out of the HTTP request.
@@ -1270,7 +1292,7 @@ abstract class OAuth2 {
     $this->doRedirectUriCallback($redirect_uri, $result);
   }
 
-  /* Other/utility functions */
+  // Other/utility functions.
 
   /**
    * Redirect the user agent.
@@ -1470,7 +1492,7 @@ abstract class OAuth2 {
    *   additional information about the error.
    * @param $state
    *   (optional) REQUIRED if the "state" parameter was present in the client
-   *   authorization request.  Set to the exact value received from the client.
+   *   authorization request. Set to the exact value received from the client.
    *
    * @see http://tools.ietf.org/html/draft-ietf-oauth-v2-10#section-3.2
    *
@@ -1549,7 +1571,7 @@ abstract class OAuth2 {
    * @param $error_uri
    *   (optional) The "error_uri" attribute provides a URI identifying a human-readable
    *   web page with information about the error, used to offer the end-user
-   *   with additional information about the error.  If the value is not an
+   *   with additional information about the error. If the value is not an
    *   absolute URI, it is relative to the URI of the requested protected
    *   resource.
    *
