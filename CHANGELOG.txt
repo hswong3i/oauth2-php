@@ -1,5 +1,13 @@
 oauth2-php revision xxx, xxxx-xx-xx (development version)
 ----------------------
+* introduce Drupal style getVariable() and setVariable, replace legacy
+  variable get/set functions.
+* remove hardcode PHP display_error and errror_reporting, as this should
+  be manually implement within 3rd party integration.
+* make verbose error as configurable and default disable, as this should
+  be manually enable within 3rd party integration.
+* add lib/OAuth2Client.inc and lib/OAuth2Exception.inc for client-side
+  implementation.
 
 oauth2-php revision 21, 2010-12-18
 ----------------------

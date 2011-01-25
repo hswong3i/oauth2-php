@@ -26,8 +26,22 @@
  * @see http://code.google.com/p/oauth2-php/
  */
 
-ini_set('display_errors', 1);
-error_reporting(E_ALL | E_STRICT);
+
+/**
+ * The default duration in seconds of the access token lifetime.
+ */
+define("OAUTH2_DEFAULT_ACCESS_TOKEN_LIFETIME", 3600);
+
+/**
+ * The default duration in seconds of the authorization code lifetime.
+ */
+define("OAUTH2_DEFAULT_AUTH_CODE_LIFETIME", 30);
+
+/**
+ * The default duration in seconds of the refresh token lifetime.
+ */
+define("OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME", 1209600);
+
 
 /**
  * @defgroup oauth2_section_2 Client Credentials
@@ -327,11 +341,6 @@ define("OAUTH2_ERROR_EXPIRED_TOKEN", "expired_token");
 define("OAUTH2_ERROR_INSUFFICIENT_SCOPE", "insufficient_scope");
 
 /**
- * Whether to show verbose error messages in the JSON response.
- */
-define("OAUTH2_ERROR_VERBOSE", TRUE);
-
-/**
  * @}
  */
 
@@ -343,6 +352,43 @@ define("OAUTH2_ERROR_VERBOSE", TRUE);
  * @author Debug, coding style clean up and documented by Edison Wong <hswong3i@pantarei-design.com>.
  */
 abstract class OAuth2 {
+
+  /**
+   * Array of persistent variables stored.
+   */
+  protected $conf = array();
+
+  /**
+   * Returns a persistent variable.
+   *
+   * To avoid problems, always use lower case for persistent variable names.
+   *
+   * @param $name
+   *   The name of the variable to return.
+   * @param $default
+   *   The default value to use if this variable has never been set.
+   *
+   * @return
+   *   The value of the variable.
+   */
+  public function getVariable($name, $default = NULL) {
+    return isset($this->conf[$name]) ? $this->conf[$name] : $default;
+  }
+
+  /**
+   * Sets a persistent variable.
+   *
+   * To avoid problems, always use lower case for persistent variable names.
+   *
+   * @param $name
+   *   The name of the variable to set.
+   * @param $value
+   *   The value to set.
+   */
+  public function setVariable($name, $value) {
+    $this->conf[$name] = $value;
+    return $this;
+  }
 
   // Subclasses must implement the following functions.
 
@@ -772,98 +818,6 @@ abstract class OAuth2 {
   // End stuff that should get overridden.
 
   /**
-   * The duration in seconds of the access token lifetime.
-   */
-  protected $access_token_lifetime = 3600;
-
-  /**
-   * The duration in seconds of the authorization code lifetime.
-   */
-  protected $auth_code_lifetime = 30;
-
-  /**
-   * The duration in seconds of the refresh token lifetime.
-   */
-  protected $refresh_token_lifetime = 1209600; // Two weeks
-
-  /**
-   * Legacy refresh token to be expired.
-   */
-  private $_old_refresh_token = '';
-
-  /**
-   * Get the access token lifetime.
-   *
-   * @return
-   *   Lifetime of access token in seconds.
-   */
-  public function getAccessTokenLifetime() {
-    return $this->access_token_lifetime;
-  }
-
-  /**
-   * Set the access token lifetime.
-   *
-   * @param $access_token_lifetime
-   *   Lifetime of access token in seconds.
-   *
-   * @return
-   *   The current OAuth2.0 server-side instance.
-   */
-  public function setAccessTokenLifetime($access_token_lifetime) {
-    $this->access_token_lifetime = $access_token_lifetime;
-    return $this;
-  }
-
-  /**
-   * Get the authorization code lifetime.
-   *
-   * @return
-   *   Lifetime of authorization code in seconds.
-   */
-  public function getAuthCodeLifetime() {
-    return $this->auth_code_lifetime;
-  }
-
-  /**
-   * Set the authorization code lifetime.
-   *
-   * @param $auth_code_lifetime
-   *   Lifetime of authorization code in seconds.
-   *
-   * @return
-   *   The current OAuth2.0 server-side instance.
-   */
-  public function setAuthCodeLifetime($auth_code_lifetime) {
-    $this->auth_code_lifetime = $auth_code_lifetime;
-    return $this;
-  }
-
-  /**
-   * Get the refresh token lifetime.
-   *
-   * @return
-   *   Lifetime of refresh token in seconds.
-   */
-  public function getRefreshTokenLifetime() {
-    return $this->refresh_token_lifetime;
-  }
-
-  /**
-   * Set the refresh token lifetime.
-   *
-   * @param $refresh_token_lifetime
-   *   Lifetime of refresh token in seconds.
-   *
-   * @return
-   *   The current OAuth2.0 server-side instance.
-   */
-  public function setRefreshTokenLifetime($refresh_token_lifetime) {
-    $this->refresh_token_lifetime = $refresh_token_lifetime;
-    return $this;
-  }
-
-  /**
    * Creates an OAuth2.0 server-side instance.
    *
    * @param $config
@@ -874,11 +828,13 @@ abstract class OAuth2 {
    *     seconds.
    *   - refresh_token_lifetime: (optional) The lifetime of refresh token in
    *     seconds.
+   *   - display_error: (optional) Whether to show verbose error messages in
+   *     the response.
    */
   public function __construct($config = array()) {
-    $this->setAccessTokenLifetime(isset($config['access_token_lifetime']) ? $config['access_token_lifetime'] : $this->getAccessTokenLifetime());
-    $this->setAuthCodeLifetime(isset($config['auth_code_lifetime']) ? $config['auth_code_lifetime'] : $this->getAuthCodeLifetime());
-    $this->setRefreshTokenLifetime(isset($config['refresh_token_lifetime']) ? $config['refresh_token_lifetime'] : $this->getRefreshTokenLifetime());
+    foreach ($config as $name => $value) {
+      $this->setVariable($name, $value);
+    }
   }
 
   // Resource protecting (Section 5).
@@ -1108,7 +1064,7 @@ abstract class OAuth2 {
           $this->errorJsonResponse(OAUTH2_HTTP_BAD_REQUEST, OAUTH2_ERROR_EXPIRED_TOKEN);
 
         // store the refresh token locally so we can delete it when a new refresh token is generated
-        $this->_old_refresh_token = $stored["token"];
+        $this->setVariable('_old_refresh_token', $stored["token"]);
 
         break;
       case OAUTH2_GRANT_TYPE_NONE:
@@ -1364,19 +1320,19 @@ abstract class OAuth2 {
   protected function createAccessToken($client_id, $scope = NULL) {
     $token = array(
       "access_token" => $this->genAccessToken(),
-      "expires_in" => $this->getAccessTokenLifetime(),
+      "expires_in" => $this->getVariable('access_token_lifetime', OAUTH2_DEFAULT_ACCESS_TOKEN_LIFETIME),
       "scope" => $scope
     );
 
-    $this->setAccessToken($token["access_token"], $client_id, time() + $this->getAccessTokenLifetime(), $scope);
+    $this->setAccessToken($token["access_token"], $client_id, time() + $this->getVariable('access_token_lifetime', OAUTH2_DEFAULT_ACCESS_TOKEN_LIFETIME), $scope);
 
     // Issue a refresh token also, if we support them
     if (in_array(OAUTH2_GRANT_TYPE_REFRESH_TOKEN, $this->getSupportedGrantTypes())) {
       $token["refresh_token"] = $this->genAccessToken();
-      $this->setRefreshToken($token["refresh_token"], $client_id, time() + $this->getRefreshTokenLifetime(), $scope);
+      $this->setRefreshToken($token["refresh_token"], $client_id, time() + $this->getVariable('refresh_token_lifetime', OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME), $scope);
       // If we've granted a new refresh token, expire the old one
-      if ($this->_old_refresh_token)
-        $this->unsetRefreshToken($this->_old_refresh_token);
+      if ($this->getVariable('_old_refresh_token'))
+        $this->unsetRefreshToken($this->getVariable('_old_refresh_token'));
     }
 
     return $token;
@@ -1400,7 +1356,7 @@ abstract class OAuth2 {
    */
   private function createAuthCode($client_id, $redirect_uri, $scope = NULL) {
     $code = $this->genAuthCode();
-    $this->setAuthCode($code, $client_id, $redirect_uri, time() + $this->getAuthCodeLifetime(), $scope);
+    $this->setAuthCode($code, $client_id, $redirect_uri, time() + $this->getVariable('auth_code_lifetime', OAUTH2_DEFAULT_AUTH_CODE_LIFETIME), $scope);
     return $code;
   }
 
@@ -1504,10 +1460,10 @@ abstract class OAuth2 {
     if ($state)
       $result["query"]["state"] = $state;
 
-    if (OAUTH2_ERROR_VERBOSE && $error_description)
+    if ($this->getVariable('display_error') && $error_description)
       $result["query"]["error_description"] = $error_description;
 
-    if (OAUTH2_ERROR_VERBOSE && $error_uri)
+    if ($this->getVariable('display_error') && $error_uri)
       $result["query"]["error_uri"] = $error_uri;
 
     $this->doRedirectUriCallback($redirect_uri, $result);
@@ -1536,10 +1492,10 @@ abstract class OAuth2 {
   private function errorJsonResponse($http_status_code, $error, $error_description = NULL, $error_uri = NULL) {
     $result['error'] = $error;
 
-    if (OAUTH2_ERROR_VERBOSE && $error_description)
+    if ($this->getVariable('display_error') && $error_description)
       $result["error_description"] = $error_description;
 
-    if (OAUTH2_ERROR_VERBOSE && $error_uri)
+    if ($this->getVariable('display_error') && $error_uri)
       $result["error_uri"] = $error_uri;
 
     header("HTTP/1.1 " . $http_status_code);
@@ -1587,10 +1543,10 @@ abstract class OAuth2 {
     if ($error)
       $result .= ", error='" . $error . "'";
 
-    if (OAUTH2_ERROR_VERBOSE && $error_description)
+    if ($this->getVariable('display_error') && $error_description)
       $result .= ", error_description='" . $error_description . "'";
 
-    if (OAUTH2_ERROR_VERBOSE && $error_uri)
+    if ($this->getVariable('display_error') && $error_uri)
       $result .= ", error_uri='" . $error_uri . "'";
 
     if ($scope)
