@@ -119,7 +119,7 @@ abstract class OAuth2Client {
    * if it is provided from server with $_REQUEST. For sure, if it is provided
    * by server it should follow our session object format.
    *
-   * Session object provided by server can ensure the correct expirse and
+   * Session object provided by server can ensure the correct expires and
    * base_domain setup as predefined in server, also you may get more useful
    * information for custom functionality, too. BTW, this may require for
    * additional remote call overhead.
@@ -149,7 +149,8 @@ abstract class OAuth2Client {
     if (!empty($access_token) && isset($access_token['access_token'])) {
       $session['access_token'] = $access_token['access_token'];
       $session['base_domain'] = $this->getVariable('base_domain', OAUTH2_DEFAULT_BASE_DOMAIN);
-      $session['expirse'] = isset($access_token['expires_in']) ? time() + $access_token['expires_in'] : time() + $this->getVariable('expires_in', OAUTH2_DEFAULT_EXPIRES_IN);
+      $session['expires'] = isset($access_token['expires_in']) ? time() + $access_token['expires_in'] : time() + $this->getVariable('expires_in', OAUTH2_DEFAULT_EXPIRES_IN);
+      $session['expirse'] = $session['expires']; // Keep this here for legacy support.
       $session['refresh_token'] = isset($access_token['refresh_token']) ? $access_token['refresh_token'] : '';
       $session['scope'] = isset($access_token['scope']) ? $access_token['scope'] : '';
       $session['secret'] = md5(base64_encode(pack('N6', mt_rand(), mt_rand(), mt_rand(), mt_rand(), mt_rand(), uniqid())));
