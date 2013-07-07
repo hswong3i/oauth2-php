@@ -1,4 +1,0 @@
-[submodule "gh-pages"]
-	path = gh-pages
-	url = https://github.com/hswong3i/oauth2-php.git
-	branch = gh-pages
